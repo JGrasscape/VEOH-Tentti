@@ -1,8 +1,10 @@
 const express = require('express');
 const body_parser = require('body-parser');
+const fs = require('fs');
 
 let app = express();
 let matkat = [];
+let id = 0;
 
 app.use(body_parser.urlencoded({
     extended: true
@@ -19,6 +21,11 @@ app.get('/', (req, res, next) => {
 
     res.write(`
         <html>
+        <head>
+            <title>Ajopäiväkirja</title>
+            <meta http-equiv="Content-Type", content="text/html;charset=UTF-8">
+            <link rel="stylesheet" type="text/css" href="style.css">
+        </head>
         <body>
             <h1>Matkalasku ja ajopäiväkirja</h1>
 
@@ -32,6 +39,7 @@ app.get('/', (req, res, next) => {
                     <th>Osapäivärahat (kpl)</th>
                     <th>Ateriakorvaus (kpl)</th>
                     <th>Korvaus</th>
+                    <th></th>
                 </tr>
     `);
 
@@ -47,6 +55,12 @@ app.get('/', (req, res, next) => {
                     <td>${matka.opr}</td>
                     <td>${matka.ak}</td>
                     <td>${korvaus}€</td>
+                    <td>
+                        <form action="delete_trip" method="POST">
+                            <input type="hidden" name="trip_id" value="${matka.id}">
+                            <button type="submit">Poista matka</button>
+                        </form>
+                    </td>
                 </tr>
         `);
     });
@@ -60,7 +74,7 @@ app.get('/', (req, res, next) => {
                 <button type="submit">Poista kaikki</button>
             </form>
 
-            <form action="add_trip" method="POST">
+            <form id="new" action="add_trip" method="POST">
                 <h3>Syötä uusi matka</h3>
                 <label for="date">Päivämäärä:</label><br>
                 <input type="date" name="date"><br>
@@ -85,6 +99,7 @@ app.get('/', (req, res, next) => {
 app.post('/add_trip', (req, res, next) => {
     console.log('add trip');
     let matka = {
+        id: id,
         date: req.body.date,
         reitti: req.body.reitti,
         km: req.body.km,
@@ -92,6 +107,7 @@ app.post('/add_trip', (req, res, next) => {
         opr: req.body.opr,
         ak: req.body.ak
     };
+    id++;
 
     console.log(matka);
     matkat.push(matka);
@@ -105,6 +121,29 @@ app.post('/delete_all', (req, res, next) => {
     matkat = [];
 
     return res.redirect('/');
+});
+
+app.post('/delete_trip', (req, res, next) => {
+    const trip_id = req.body.trip_id;
+    console.log('delete trip ' + trip_id);
+    
+    // Käydään matkat-taulukko läpi ja poistetaan haluttu objekti
+    for (var i = 0; i < matkat.length; i++) {
+        if (matkat[i].id == trip_id) {
+            console.log('löytyi kohdasta ' + i);
+            matkat.splice(i, 1);
+            break;
+        }
+    }
+
+    return res.redirect('/');
+});
+
+app.get('/style.css', (req, res, next) => {
+    fs.readFile('./style.css', (err, data) => {
+        res.write(data);
+        res.end();
+    });
 });
 
 app.use((req, res, next) => {
